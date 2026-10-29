@@ -46,15 +46,17 @@ jobs:
           path: BubbleDock.apk
           retention-days: 90
 
-      - name: Publish APK to Release v1.4.1
+      - name: Publish APK to Release v1.4.2
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.1
-          name: BubbleDock v1.4.1
+          tag_name: v1.4.2
+          name: BubbleDock v1.4.2
           body: |
-            BubbleDock v1.4.1 — রিং ঠিক করা:
+            BubbleDock v1.4.2 — মাঝখানে ক্রস:
 
-            • সার্কুলার মেনু এখন আসল রিং: কোনো বর্গাকার প্যানেল নেই, আইকনগুলো বাবলের চারপাশে ভাসবে, মাঝখানে বাবলটাই থাকবে
+            • সার্কুলার মেনুর মাঝখানে এখন ক্রস চিহ্ন থাকবে, চাপলেই মেনু বন্ধ হবে
+            • সার্কুলার মেনু আসল রিং: কোনো বর্গাকার প্যানেল নেই, আইকনগুলো বাবলের চারপাশে ভাসবে
+            • সাইজ অনেক ছোট: রিং ১৬০dp, আইকন ৩২dp
             • এক ট্যাপে সার্কুলার মেনু, এতে মূলত বিভিন্ন অ্যাকশন
             • ডাবল ট্যাপে সরাসরি Previous recent app
             • লং প্রেসে ডক লাইন, সেটিংস থেকে হরিজন্টাল বা ভার্টিকাল
