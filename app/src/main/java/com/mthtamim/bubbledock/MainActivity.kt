@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun buildUi() {
         heading("BubbleDock")
-        body("বাবলে ট্যাপ করলে প্যানেল খুলবে। সেখানে রিসেন্ট, ফেভারিট, গ্রুপ, সব অ্যাপ আর তোমার বেছে নেওয়া কুইক অ্যাকশন থাকবে। জেসচার বাধ্যতামূলক নয়। সব সেটিংস শুধু এই ফোনেই থাকে, কোথাও পাঠানো হয় না।")
+        body("সাধারণত শুধু বাবল সার্কেল দেখা যাবে। বাবলে একবার ট্যাপ করলে ঐচ্ছিক অ্যাকশন আর গ্রুপ আসবে, ডাবল ট্যাপ করলে নিচে এক লাইনে বড় অ্যাপের ডক আসবে — একটাই লাইন, বাম-ডানে স্ক্রল করে দেখা যাবে। সব সেটিংস শুধু এই ফোনেই থাকে, কোথাও পাঠানো হয় না।")
         body("বর্তমান প্রোফাইল: " + Store.profile(this))
         body("Overlay: " + if (Settings.canDrawOverlays(this)) "চালু" else "বন্ধ")
         body("Usage Access: " + if (AppList.hasUsageAccess(this)) "চালু" else "বন্ধ")
@@ -166,7 +166,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         heading("কুইক অ্যাকশন")
-        body("যেগুলোতে টিক দেবে, সেগুলোই প্যানেলে দেখাবে।")
+        body("যেগুলোতে টিক দেবে, সেগুলোই বাবলে একবার ট্যাপ করলে দেখাবে।")
         val checks = ArrayList<Pair<String, CheckBox>>()
         val currentActions = Store.quickActions(this)
         for (item in Actions.catalogue) {
@@ -213,16 +213,12 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "লুকানোর তালিকা সেভ হয়েছে", Toast.LENGTH_SHORT).show()
         } }
 
-        heading("বাবল আর প্যানেলের চেহারা")
+        heading("বাবল আর ডকের চেহারা")
         button("বাবল: ছোট (48)") { Store.setBubbleSize(this, 48) }
         button("বাবল: মাঝারি (56)") { Store.setBubbleSize(this, 56) }
         button("বাবল: বড় (72)") { Store.setBubbleSize(this, 72) }
-        button("প্যানেল: গ্রিড") { Store.setPanelLayout(this, "grid") }
-        button("প্যানেল: লিস্ট") { Store.setPanelLayout(this, "list") }
-        body("বাবলের সাইজ বদলাতে বাবল বন্ধ করে আবার চালু করো।")
-
-        heading("ডাবল-ট্যাপ (ঐচ্ছিক)")
-        button("ডাবল-ট্যাপে কী হবে বাছো") { pickDoubleTap() }
+        body("বাবলের সাইজ বদলাতে বাবল বন্ধ করে আবার চালু করো। ডক সবসময় একটাই লাইন, বড় আইকনসহ।")
+        body("বাবলে ডাবল ট্যাপ করলে সবসময় অ্যাপের লাইন খুলবে — v1.1-এ ডাবল-ট্যাপের আলাদা অ্যাকশন বাছাই আর নেই।")
 
         heading("ব্যাকআপ")
         button("সেটিংস JSON কপি করো") {
@@ -231,7 +227,7 @@ class MainActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(clip)
             Toast.makeText(this, "ব্যাকআপ কপি হয়েছে", Toast.LENGTH_SHORT).show()
         }
-        body("v1.0-তে নেই, v2-তে আসবে: ম্যাক্রো/অটো-ট্যাপ সিকোয়েন্স, PhoneLink/Automation Lab ইন্টিগ্রেশন।")
+        body("v1.1-তে নেই, v2-তে আসবে: ম্যাক্রো/অটো-ট্যাপ সিকোয়েন্স, PhoneLink/Automation Lab ইন্টিগ্রেশন।")
     }
 
     private fun startBubble() {
@@ -278,26 +274,4 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun pickDoubleTap() {
-        val labels = ArrayList<String>()
-        val values = ArrayList<String>()
-        labels.add("কিছু না (শুধু প্যানেল)")
-        values.add("")
-        for (item in Actions.catalogue) {
-            labels.add(item.label)
-            values.add(item.code)
-        }
-        for (app in AppList.launchable(this)) {
-            labels.add("অ্যাপ: " + app.label)
-            values.add("app:" + app.packageName)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("ডাবল-ট্যাপে কী হবে")
-            .setItems(labels.toTypedArray()) { _, which ->
-                Store.setDoubleTapAction(this, values[which])
-                Toast.makeText(this, "ডাবল-ট্যাপ সেভ হয়েছে", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("বাতিল", null)
-            .show()
-    }
 }

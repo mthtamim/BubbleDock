@@ -24,21 +24,37 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
+/**
+ * BubbleDock v1.1: the grid panel is gone.
+ * - Normally only the bubble circle is visible.
+ * - Single tap on the bubble: optional actions popup (quick actions + groups).
+ * - Double tap on the bubble: ONE single-line dock, big and horizontally
+ *   scrollable. The dock is exactly one row, never wrapping to a second row.
+ *   The row can be big: 64dp icons with labels, in a tall dock card.
+ * - Tapping an app in the dock launches it and hides the dock.
+ * - Double tap again, the close button, or tapping an app hides the dock.
+ */
 class BubbleService : Service() {
     private lateinit var windowManager: WindowManager
     private var bubbleView: ImageView? = null
-    private var panelView: LinearLayout? = null
-    private var panelContent: LinearLayout? = null
+    private var dockView: LinearLayout? = null
+    private var dockRow: LinearLayout? = null
+    private var dockTitle: TextView? = null
+    private var actionsView: LinearLayout? = null
     private var trashView: TextView? = null
     private var searchQuery: String = ""
-    private var panelOpen: Boolean = false
+    private var groupSelected: String? = null
+    private var dockOpen: Boolean = false
+    private var actionsOpen: Boolean = false
     private var lastTapTime: Long = 0L
+    private var bubbleX: Int = 0
+    private var bubbleY: Int = 0
     private val handler = Handler(Looper.getMainLooper())
     private var screenWidth: Int = 1080
     private var screenHeight: Int = 1920
@@ -53,11 +69,22 @@ class BubbleService : Service() {
         bubbleView?.alpha = 0.5f
     }
 
+    private val singleTapRunnable = Runnable {
+        if (lastTapTime != 0L) {
+            lastTapTime = 0L
+            toggleActions()
+        }
+    }
+
     private val hideCheckRunnable = object : Runnable {
         override fun run() {
             checkHiddenApp()
             handler.postDelayed(this, 2000L)
         }
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
     }
 
     override fun onCreate() {
@@ -95,7 +122,8 @@ class BubbleService : Service() {
         } catch (e: Exception) {
         }
         removeBubble()
-        removePanel()
+        removeDock()
+        removeActions()
         removeTrash()
         super.onDestroy()
     }
@@ -167,6 +195,8 @@ class BubbleService : Service() {
         params.gravity = Gravity.TOP or Gravity.START
         params.x = screenWidth - size - 24
         params.y = screenHeight / 3
+        bubbleX = params.x
+        bubbleY = params.y
         image.setOnTouchListener(BubbleTouch(params))
         windowManager.addView(image, params)
         bubbleView = image
@@ -184,7 +214,6 @@ class BubbleService : Service() {
         private var startX: Int = 0
         private var startY: Int = 0
         private var moved: Boolean = false
-        private var downTime: Long = 0L
 
         override fun onTouch(view: View, event: MotionEvent): Boolean {
             when (event.action) {
@@ -194,7 +223,6 @@ class BubbleService : Service() {
                     startX = params.x
                     startY = params.y
                     moved = false
-                    downTime = System.currentTimeMillis()
                     view.alpha = 1.0f
                     handler.removeCallbacks(idleRunnable)
                     showTrash()
@@ -209,6 +237,8 @@ class BubbleService : Service() {
                     if (moved) {
                         params.x = startX + dx
                         params.y = startY + dy
+                        bubbleX = params.x
+                        bubbleY = params.y
                         try {
                             windowManager.updateViewLayout(view, params)
                         } catch (e: Exception) {
@@ -220,12 +250,13 @@ class BubbleService : Service() {
                     removeTrash()
                     if (!moved) {
                         val now = System.currentTimeMillis()
-                        val isDouble = now - lastTapTime < 350L
-                        lastTapTime = now
-                        if (isDouble) {
-                            handleDoubleTap()
+                        if (lastTapTime != 0L && now - lastTapTime < 350L) {
+                            handler.removeCallbacks(singleTapRunnable)
+                            lastTapTime = 0L
+                            toggleDock()
                         } else {
-                            togglePanel()
+                            lastTapTime = now
+                            handler.postDelayed(singleTapRunnable, 360L)
                         }
                     } else {
                         val bubbleBottom = params.y + view.height
@@ -234,6 +265,8 @@ class BubbleService : Service() {
                             return true
                         }
                         snapToEdge(params, view)
+                        bubbleX = params.x
+                        bubbleY = params.y
                     }
                     scheduleIdle()
                     return true
@@ -250,24 +283,6 @@ class BubbleService : Service() {
             windowManager.updateViewLayout(view, params)
         } catch (e: Exception) {
         }
-    }
-
-    private fun handleDoubleTap() {
-        val action = Store.doubleTapAction(this)
-        if (action.isBlank()) {
-            togglePanel()
-            return
-        }
-        if (action.startsWith("app:")) {
-            val pkg = action.removePrefix("app:")
-            if (!AppList.launch(this, pkg)) {
-                Toast.makeText(this, "অ্যাপ খোলা যায়নি", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Actions.run(this, action)
-        }
-        removePanel()
-        panelOpen = false
     }
 
     private fun showTrash() {
@@ -311,37 +326,43 @@ class BubbleService : Service() {
         bubbleView = null
     }
 
-    private fun togglePanel() {
-        if (panelOpen) {
-            removePanel()
-            panelOpen = false
+    private fun toggleDock() {
+        if (dockOpen) {
+            removeDock()
         } else {
-            showPanel()
-            panelOpen = true
+            removeActions()
+            showDock()
         }
     }
 
-    private fun showPanel() {
-        if (panelView != null) return
+    private fun toggleActions() {
+        if (actionsOpen) {
+            removeActions()
+        } else {
+            removeDock()
+            showActions()
+        }
+    }
+
+    private fun showDock() {
+        if (dockView != null) return
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
         root.setBackgroundResource(R.drawable.bg_panel)
-        root.setPadding(20, 20, 20, 20)
+        root.setPadding(dp(16), dp(16), dp(16), dp(16))
 
         val top = LinearLayout(this)
         top.orientation = LinearLayout.HORIZONTAL
         val title = TextView(this)
-        title.text = getString(R.string.panel_title)
-        title.setTextSize(18f)
+        title.text = "BubbleDock — অ্যাপের লাইন"
+        title.setTextSize(16f)
         title.setTextColor(resources.getColor(R.color.bd_text, theme))
         val titleParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         title.layoutParams = titleParams
+        dockTitle = title
         val close = Button(this)
         close.text = getString(R.string.close)
-        close.setOnClickListener {
-            removePanel()
-            panelOpen = false
-        }
+        close.setOnClickListener { removeDock() }
         top.addView(title)
         top.addView(close)
         root.addView(top)
@@ -359,169 +380,198 @@ class BubbleService : Service() {
 
             override fun afterTextChanged(s: Editable?) {
                 searchQuery = s?.toString() ?: ""
-                refreshPanelContent()
+                refreshDockRow()
             }
         })
         root.addView(search)
 
-        val scroll = ScrollView(this)
-        val content = LinearLayout(this)
-        content.orientation = LinearLayout.VERTICAL
-        scroll.addView(content)
+        val scroll = HorizontalScrollView(this)
+        scroll.isHorizontalScrollBarEnabled = false
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        scroll.addView(row)
         root.addView(scroll)
-        panelContent = content
-        refreshPanelContent()
+        dockRow = row
+        refreshDockRow()
 
-        val width = (screenWidth * 9) / 10
-        val height = (screenHeight * 3) / 4
         val params = WindowManager.LayoutParams(
-            width, height,
+            screenWidth - dp(20),
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         )
-        params.gravity = Gravity.CENTER
+        params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        params.y = dp(16)
         windowManager.addView(root, params)
-        panelView = root
+        dockView = root
+        dockOpen = true
     }
 
-    private fun removePanel() {
-        panelView?.let {
+    private fun removeDock() {
+        dockView?.let {
             try {
                 windowManager.removeView(it)
             } catch (e: Exception) {
             }
         }
-        panelView = null
-        panelContent = null
+        dockView = null
+        dockRow = null
+        dockTitle = null
+        dockOpen = false
         searchQuery = ""
+        groupSelected = null
     }
 
-    private fun refreshPanelContent() {
-        val content = panelContent ?: return
-        content.removeAllViews()
-        addSectionTitle(content, getString(R.string.recent_title))
-        val recent = AppList.recent(this, 8)
-        if (recent.isEmpty()) {
-            addNote(content, getString(R.string.no_recent))
+    private fun refreshDockRow() {
+        val row = dockRow ?: return
+        row.removeAllViews()
+        val apps = dockApps()
+        dockTitle?.text = if (groupSelected != null) {
+            "গ্রুপ: " + groupSelected
+        } else if (searchQuery.isNotBlank()) {
+            "খোঁজা অ্যাপ"
         } else {
-            addAppRows(content, recent)
+            "BubbleDock — অ্যাপের লাইন"
         }
-        addSectionTitle(content, getString(R.string.fav_title))
-        val favPackages = Store.favourites(this)
-        val favApps = favPackages.map { AppInfo(it, AppList.labelFor(this, it)) }
-        if (favApps.isEmpty()) {
-            addNote(content, getString(R.string.no_fav))
-        } else {
-            addAppRows(content, favApps)
+        if (apps.isEmpty()) {
+            val note = TextView(this)
+            note.text = getString(R.string.no_fav)
+            note.setTextColor(resources.getColor(R.color.bd_text_secondary, theme))
+            row.addView(note)
+            return
         }
-        addSectionTitle(content, getString(R.string.groups_title))
-        val groups = Store.groups(this)
-        val keys = groups.keys()
-        var hasGroup = false
-        while (keys.hasNext()) {
-            hasGroup = true
-            val name = keys.next()
-            val arr = groups.optJSONArray(name)
-            addSectionTitle(content, "• " + name)
+        for (app in apps) {
+            val item = LinearLayout(this)
+            item.orientation = LinearLayout.VERTICAL
+            item.gravity = Gravity.CENTER
+            val itemParams = LinearLayout.LayoutParams(dp(76), LinearLayout.LayoutParams.WRAP_CONTENT)
+            itemParams.setMargins(dp(4), dp(4), dp(4), dp(4))
+            item.layoutParams = itemParams
+            val icon = ImageView(this)
+            val iconParams = LinearLayout.LayoutParams(dp(64), dp(64))
+            icon.layoutParams = iconParams
+            try {
+                icon.setImageDrawable(packageManager.getApplicationIcon(app.packageName))
+            } catch (e: Exception) {
+                icon.setImageResource(R.drawable.ic_bubble)
+            }
+            val label = TextView(this)
+            label.text = app.label
+            label.setTextSize(12f)
+            label.maxLines = 1
+            label.ellipsize = android.text.TextUtils.TruncateAt.END
+            label.gravity = Gravity.CENTER
+            label.setTextColor(resources.getColor(R.color.bd_text, theme))
+            item.addView(icon)
+            item.addView(label)
+            item.setOnClickListener { openApp(app.packageName) }
+            row.addView(item)
+        }
+    }
+
+    private fun dockApps(): List<AppInfo> {
+        if (searchQuery.isNotBlank()) {
+            val query = searchQuery.lowercase()
+            return AppList.launchable(this).filter { it.label.lowercase().contains(query) }
+        }
+        val selected = groupSelected
+        if (selected != null) {
+            val groups = Store.groups(this)
+            val arr = groups.optJSONArray(selected)
+            val apps = ArrayList<AppInfo>()
             if (arr != null) {
-                val apps = ArrayList<AppInfo>()
                 for (i in 0 until arr.length()) {
                     val pkg = arr.optString(i)
                     if (pkg.isNotEmpty()) apps.add(AppInfo(pkg, AppList.labelFor(this, pkg)))
                 }
-                addAppRows(content, apps)
             }
+            return apps
         }
-        if (!hasGroup) {
-            addNote(content, "এখনো কোনো গ্রুপ নেই। সেটিংস থেকে গ্রুপ বানাও।")
-        }
-        addSectionTitle(content, getString(R.string.actions_title))
-        val actionCodes = Store.quickActions(this)
-        for (code in actionCodes) {
-            val button = appButton(Actions.labelFor(code))
+        val favPackages = Store.favourites(this)
+        val favApps = favPackages.map { AppInfo(it, AppList.labelFor(this, it)) }
+        val favSet = favPackages.toSet()
+        val recent = AppList.recent(this, 8).filter { !favSet.contains(it.packageName) }
+        return favApps + recent
+    }
+
+    private fun showActions() {
+        if (actionsView != null) return
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.setBackgroundResource(R.drawable.bg_panel)
+        root.setPadding(dp(16), dp(16), dp(16), dp(16))
+        val title = TextView(this)
+        title.text = getString(R.string.actions_title)
+        title.setTextSize(16f)
+        title.setTextColor(resources.getColor(R.color.bd_text, theme))
+        root.addView(title)
+        for (code in Store.quickActions(this)) {
+            val button = Button(this)
+            button.text = Actions.labelFor(code)
+            button.setBackgroundResource(R.drawable.bg_chip)
+            button.setTextColor(resources.getColor(R.color.bd_text, theme))
             button.setOnClickListener {
                 Actions.run(this, code)
-                removePanel()
-                panelOpen = false
+                removeActions()
             }
-            content.addView(button)
+            root.addView(button)
         }
-        addSectionTitle(content, getString(R.string.all_title))
-        val all = AppList.launchable(this)
-        val filtered = if (searchQuery.isBlank()) {
-            all
-        } else {
-            all.filter { it.label.lowercase().contains(searchQuery.lowercase()) }
-        }
-        addAppRows(content, filtered)
-    }
-
-    private fun addSectionTitle(parent: LinearLayout, text: String) {
-        val view = TextView(this)
-        view.text = text
-        view.setTextSize(16f)
-        view.setTextColor(resources.getColor(R.color.bd_text, theme))
-        view.setPadding(0, 20, 0, 8)
-        parent.addView(view)
-    }
-
-    private fun addNote(parent: LinearLayout, text: String) {
-        val view = TextView(this)
-        view.text = text
-        view.setTextColor(resources.getColor(R.color.bd_text_secondary, theme))
-        view.setPadding(0, 4, 0, 4)
-        parent.addView(view)
-    }
-
-    private fun appButton(label: String): Button {
-        val button = Button(this)
-        button.text = label
-        button.setBackgroundResource(R.drawable.bg_chip)
-        button.setTextColor(resources.getColor(R.color.bd_text, theme))
-        button.setPadding(16, 16, 16, 16)
-        return button
-    }
-
-    private fun addAppRows(parent: LinearLayout, apps: List<AppInfo>) {
-        val useGrid = Store.panelLayout(this) == "grid"
-        if (!useGrid) {
-            for (app in apps) {
-                val button = appButton(app.label)
-                button.setOnClickListener {
-                    openApp(app.packageName)
-                }
-                parent.addView(button)
+        val groups = Store.groups(this)
+        val keys = groups.keys()
+        while (keys.hasNext()) {
+            val name = keys.next()
+            val button = Button(this)
+            button.text = "গ্রুপ: " + name
+            button.setBackgroundResource(R.drawable.bg_chip)
+            button.setTextColor(resources.getColor(R.color.bd_text, theme))
+            button.setOnClickListener {
+                groupSelected = name
+                removeActions()
+                showDock()
             }
-            return
+            root.addView(button)
         }
-        var index = 0
-        while (index < apps.size) {
-            val row = LinearLayout(this)
-            row.orientation = LinearLayout.HORIZONTAL
-            for (col in 0 until 3) {
-                if (index + col >= apps.size) break
-                val app = apps[index + col]
-                val button = appButton(app.label)
-                val params = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                params.setMargins(4, 4, 4, 4)
-                button.layoutParams = params
-                button.setOnClickListener {
-                    openApp(app.packageName)
-                }
-                row.addView(button)
+        val close = Button(this)
+        close.text = getString(R.string.close)
+        close.setOnClickListener { removeActions() }
+        root.addView(close)
+
+        val width = dp(220)
+        val x = (bubbleX - width).coerceAtLeast(16)
+        val y = (bubbleY - dp(20)).coerceAtLeast(16)
+        val params = WindowManager.LayoutParams(
+            width,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        )
+        params.gravity = Gravity.TOP or Gravity.START
+        params.x = x
+        params.y = y
+        windowManager.addView(root, params)
+        actionsView = root
+        actionsOpen = true
+    }
+
+    private fun removeActions() {
+        actionsView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
             }
-            parent.addView(row)
-            index += 3
         }
+        actionsView = null
+        actionsOpen = false
     }
 
     private fun openApp(packageName: String) {
         if (!AppList.launch(this, packageName)) {
             Toast.makeText(this, "অ্যাপ খোলা যায়নি", Toast.LENGTH_SHORT).show()
         }
-        removePanel()
-        panelOpen = false
+        removeDock()
+        removeActions()
     }
 
     private fun checkHiddenApp() {
@@ -547,8 +597,8 @@ class BubbleService : Service() {
 
     private fun stopBubble() {
         Store.setBubbleOn(this, false)
-        removePanel()
-        panelOpen = false
+        removeDock()
+        removeActions()
         stopSelf()
     }
 }
