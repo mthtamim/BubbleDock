@@ -46,18 +46,19 @@ jobs:
           path: BubbleDock.apk
           retention-days: 90
 
-      - name: Publish APK to Release v1.2.0
+      - name: Publish APK to Release v1.3.0
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.0
-          name: BubbleDock v1.2.0
+          tag_name: v1.3.0
+          name: BubbleDock v1.3.0
           body: |
-            BubbleDock v1.2.0 — আইকন-অনলি ওভারলে, PhoneLink স্টাইল সেটিংস:
+            BubbleDock v1.3.0 — ছোট লাইন আর সব অ্যাপ:
 
+            • ডক আর অ্যাকশন এখন সিম্পল ছোট লাইন, প্রায় ৫৬dp উঁচু, এক সারিতে আইকন
+            • Android ১১+ queries ফিক্স: থার্ড-পার্টি অ্যাপও ফেভারিট, গ্রুপ আর ডকে আসবে
+            • ফেভারিট আর রিসেন্ট খালি থাকলে ডক খালি থাকবে না, সব অ্যাপ আসবে
             • বাবল, ডক, অ্যাকশন — কোথাও কোনো লেখা নেই, শুধু আইকন
-            • ডাবল ট্যাপে এক লাইনের বড় ডক, শুধু অ্যাপের আইকন, 🔍 আর ✕ আইকন
-            • এক ট্যাপে শুধু আইকনের অ্যাকশন আর গ্রুপ
-            • সেটিংস PhoneLink স্টাইলে: কালো সবুজ ব্যাকগ্রাউন্ড, emerald আউটলাইনের ডার্ক কার্ড, লেখা খুব কম, কোনো ব্যাখ্যা নেই
+            • সেটিংস PhoneLink স্টাইলে, লেখা খুব কম, কোনো ব্যাখ্যা নেই
             • সব সেটিংস শুধু ফোনেই থাকে, কোনো সার্ভার নেই
             • v2-তে আসবে: ম্যাক্রো আর PhoneLink/Automation Lab ইন্টিগ্রেশন
           files: BubbleDock.apk
