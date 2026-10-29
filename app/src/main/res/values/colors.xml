@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bd_bg">#0F172A</color>
-    <color name="bd_card">#1E293B</color>
+    <color name="bd_bg">#0A0F0D</color>
+    <color name="bd_card">#122019</color>
     <color name="bd_text">#F1F5F9</color>
     <color name="bd_text_body">#CBD5E1</color>
     <color name="bd_text_secondary">#94A3B8</color>
@@ -9,7 +9,7 @@
     <color name="bd_accent_dark">#15803D</color>
     <color name="bd_on_accent">#FFFFFF</color>
     <color name="bd_danger">#E11D48</color>
-    <color name="bd_divider">#334155</color>
+    <color name="bd_divider">#4422C55E</color>
     <color name="bd_bubble">#22C55E</color>
-    <color name="ic_launcher_background">#0F172A</color>
+    <color name="ic_launcher_background">#0A0F0D</color>
 </resources>

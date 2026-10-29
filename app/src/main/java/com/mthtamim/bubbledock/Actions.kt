@@ -42,6 +42,27 @@ object Actions {
         return catalogue.firstOrNull { it.code == code }?.label ?: code
     }
 
+    fun iconFor(code: String): String {
+        return when (code) {
+            "home" -> "\uD83C\uDFE0"
+            "back" -> "\u2190"
+            "recents" -> "\u25A2"
+            "screenshot" -> "\uD83D\uDCF7"
+            "lock" -> "\uD83D\uDD12"
+            "torch" -> "\uD83D\uDD26"
+            "wifi_panel" -> "\uD83D\uDCF6"
+            "bluetooth_settings" -> "\uD83D\uDD35"
+            "sound_normal" -> "\uD83D\uDD0A"
+            "sound_vibrate" -> "\uD83D\uDCF3"
+            "dnd_toggle" -> "\uD83C\uDF19"
+            "volume_up" -> "\uD83D\uDD0A"
+            "volume_down" -> "\uD83D\uDD09"
+            "brightness_up" -> "\u2600"
+            "brightness_down" -> "\uD83C\uDF11"
+            else -> "\u25CF"
+        }
+    }
+
     fun run(context: Context, code: String) {
         when (code) {
             "home" -> {

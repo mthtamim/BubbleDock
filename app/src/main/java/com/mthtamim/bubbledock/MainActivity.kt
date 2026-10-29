@@ -38,19 +38,11 @@ class MainActivity : AppCompatActivity() {
         root.addView(view)
     }
 
-    private fun body(text: String) {
-        val view = TextView(this)
-        view.text = text
-        view.setTextColor(resources.getColor(R.color.bd_text_body, theme))
-        view.setPadding(0, 4, 0, 4)
-        root.addView(view)
-    }
-
     private fun button(label: String, onClick: () -> Unit) {
         val view = Button(this)
         view.text = label
-        view.setBackgroundResource(R.drawable.bg_button)
-        view.setTextColor(resources.getColor(R.color.bd_on_accent, theme))
+        view.setBackgroundResource(R.drawable.bg_panel)
+        view.setTextColor(resources.getColor(R.color.bd_text, theme))
         view.setOnClickListener { onClick() }
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -63,24 +55,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun buildUi() {
         heading("BubbleDock")
-        body("সাধারণত শুধু বাবল সার্কেল দেখা যাবে। বাবলে একবার ট্যাপ করলে ঐচ্ছিক অ্যাকশন আর গ্রুপ আসবে, ডাবল ট্যাপ করলে নিচে এক লাইনে বড় অ্যাপের ডক আসবে — একটাই লাইন, বাম-ডানে স্ক্রল করে দেখা যাবে। সব সেটিংস শুধু এই ফোনেই থাকে, কোথাও পাঠানো হয় না।")
-        body("বর্তমান প্রোফাইল: " + Store.profile(this))
-        body("Overlay: " + if (Settings.canDrawOverlays(this)) "চালু" else "বন্ধ")
-        body("Usage Access: " + if (AppList.hasUsageAccess(this)) "চালু" else "বন্ধ")
 
         heading("বাবল")
-        button("বাবল চালু করো") { startBubble() }
-        button("বাবল বন্ধ করো") { stopBubble() }
+        button("বাবল চালু") { startBubble() }
+        button("বাবল বন্ধ") { stopBubble() }
 
         heading("পারমিশন")
-        body("Overlay ছাড়া বাবল দেখা যাবে না। Usage Access ছাড়া রিসেন্ট অ্যাপ আসবে না। ব্যাটারি ছাড় না দিলে XOS বাবল মেরে ফেলতে পারে। Accessibility আর Device Admin শুধু নির্দিষ্ট কয়েকটা অ্যাকশনের জন্য, বেসিক অ্যাপ সুইচের জন্য লাগে না।")
-        button("Overlay পারমিশন দাও") {
+        button("Overlay") {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + packageName)))
         }
-        button("Usage Access দাও") {
+        button("Usage Access") {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         }
-        button("ব্যাটারি অপটিমাইজেশন ছাড় দাও") {
+        button("ব্যাটারি ছাড়") {
             val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
             if (!pm.isIgnoringBatteryOptimizations(packageName)) {
                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
@@ -90,25 +77,25 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "ব্যাটারি ছাড় আগেই দেওয়া আছে", Toast.LENGTH_SHORT).show()
             }
         }
-        button("Accessibility সেটিংস খোলো (ঐচ্ছিক)") {
+        button("Accessibility") {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        button("Device Admin চালু করো (ঐচ্ছিক, শুধু লকের জন্য)") {
+        button("Device Admin") {
             val admin = ComponentName(this, BubbleAdminReceiver::class.java)
             val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
             intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
             intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "শুধু তোমার ট্যাপে স্ক্রিন লক করার জন্য।")
             startActivity(intent)
         }
-        button("ব্রাইটনেস লেখার পারমিশন (ঐচ্ছিক)") {
+        button("ব্রাইটনেস") {
             val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
             intent.data = Uri.parse("package:" + packageName)
             startActivity(intent)
         }
-        button("ক্যামেরা পারমিশন (ফ্ল্যাশলাইটের জন্য)") {
+        button("ক্যামেরা") {
             requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 101)
         }
-        button("নোটিফিকেশন পারমিশন (বাবল চালু রাখতে)") {
+        button("নোটিফিকেশন") {
             if (Build.VERSION.SDK_INT >= 33) {
                 requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 102)
             } else {
@@ -116,7 +103,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        heading("ফেভারিট অ্যাপ")
+        heading("ফেভারিট")
         button("ফেভারিট বাছো") { pickApps("ফেভারিট বাছো", Store.favourites(this)) { chosen ->
             Store.saveFavourites(this, chosen)
             Toast.makeText(this, "ফেভারিট সেভ হয়েছে", Toast.LENGTH_SHORT).show()
@@ -124,7 +111,7 @@ class MainActivity : AppCompatActivity() {
 
         heading("গ্রুপ")
         val groupInput = EditText(this)
-        groupInput.hint = "নতুন গ্রুপের নাম, যেমন পড়াশোনা"
+        groupInput.hint = "গ্রুপের নাম"
         root.addView(groupInput)
         button("গ্রুপ বানাও") {
             val name = groupInput.text.toString().trim()
@@ -141,8 +128,7 @@ class MainActivity : AppCompatActivity() {
         val groupKeys = groups.keys()
         while (groupKeys.hasNext()) {
             val name = groupKeys.next()
-            body("গ্রুপ: " + name)
-            button(name + " — অ্যাপ বাছো") {
+            button(name + " অ্যাপ") {
                 val current = ArrayList<String>()
                 val arr = groups.optJSONArray(name)
                 if (arr != null) {
@@ -157,7 +143,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "গ্রুপ সেভ হয়েছে", Toast.LENGTH_SHORT).show()
                 }
             }
-            button(name + " — গ্রুপ মোছো") {
+            button(name + " মোছো") {
                 val updated = Store.groups(this)
                 updated.remove(name)
                 Store.saveGroups(this, updated)
@@ -165,8 +151,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        heading("কুইক অ্যাকশন")
-        body("যেগুলোতে টিক দেবে, সেগুলোই বাবলে একবার ট্যাপ করলে দেখাবে।")
+        heading("অ্যাকশন")
         val checks = ArrayList<Pair<String, CheckBox>>()
         val currentActions = Store.quickActions(this)
         for (item in Actions.catalogue) {
@@ -177,7 +162,7 @@ class MainActivity : AppCompatActivity() {
             root.addView(check)
             checks.add(Pair(item.code, check))
         }
-        button("কুইক অ্যাকশন সেভ করো") {
+        button("অ্যাকশন সেভ") {
             val chosen = ArrayList<String>()
             for (pair in checks) {
                 if (pair.second.isChecked) chosen.add(pair.first)
@@ -188,7 +173,7 @@ class MainActivity : AppCompatActivity() {
 
         heading("প্রোফাইল")
         val profileInput = EditText(this)
-        profileInput.hint = "নতুন প্রোফাইলের নাম"
+        profileInput.hint = "প্রোফাইলের নাম"
         root.addView(profileInput)
         button("প্রোফাইল বানাও") {
             val name = profileInput.text.toString().trim()
@@ -201,33 +186,30 @@ class MainActivity : AppCompatActivity() {
             }
         }
         for (name in Store.profiles(this)) {
-            button("প্রোফাইল: " + name) {
+            button(name) {
                 Store.setProfile(this, name)
                 recreate()
             }
         }
 
-        heading("যেসব অ্যাপে বাবল লুকিয়ে থাকবে")
+        heading("লুকানো")
         button("লুকানোর অ্যাপ বাছো") { pickApps("লুকানোর অ্যাপ বাছো", Store.hiddenApps(this)) { chosen ->
             Store.saveHiddenApps(this, chosen)
             Toast.makeText(this, "লুকানোর তালিকা সেভ হয়েছে", Toast.LENGTH_SHORT).show()
         } }
 
-        heading("বাবল আর ডকের চেহারা")
-        button("বাবল: ছোট (48)") { Store.setBubbleSize(this, 48) }
-        button("বাবল: মাঝারি (56)") { Store.setBubbleSize(this, 56) }
-        button("বাবল: বড় (72)") { Store.setBubbleSize(this, 72) }
-        body("বাবলের সাইজ বদলাতে বাবল বন্ধ করে আবার চালু করো। ডক সবসময় একটাই লাইন, বড় আইকনসহ।")
-        body("বাবলে ডাবল ট্যাপ করলে সবসময় অ্যাপের লাইন খুলবে — v1.1-এ ডাবল-ট্যাপের আলাদা অ্যাকশন বাছাই আর নেই।")
+        heading("সাইজ")
+        button("বাবল ৪৮") { Store.setBubbleSize(this, 48) }
+        button("বাবল ৫৬") { Store.setBubbleSize(this, 56) }
+        button("বাবল ৭২") { Store.setBubbleSize(this, 72) }
 
         heading("ব্যাকআপ")
-        button("সেটিংস JSON কপি করো") {
+        button("ব্যাকআপ কপি") {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("BubbleDock backup", Store.backupJson(this))
             clipboard.setPrimaryClip(clip)
             Toast.makeText(this, "ব্যাকআপ কপি হয়েছে", Toast.LENGTH_SHORT).show()
         }
-        body("v1.1-তে নেই, v2-তে আসবে: ম্যাক্রো/অটো-ট্যাপ সিকোয়েন্স, PhoneLink/Automation Lab ইন্টিগ্রেশন।")
     }
 
     private fun startBubble() {

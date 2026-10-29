@@ -31,6 +31,7 @@ import android.widget.TextView
 import android.widget.Toast
 
 /**
+ * BubbleDock v1.2: overlay is icon-only, no text anywhere in bubble/dock/actions.
  * BubbleDock v1.1: the grid panel is gone.
  * - Normally only the bubble circle is visible.
  * - Single tap on the bubble: optional actions popup (quick actions + groups).
@@ -45,7 +46,6 @@ class BubbleService : Service() {
     private var bubbleView: ImageView? = null
     private var dockView: LinearLayout? = null
     private var dockRow: LinearLayout? = null
-    private var dockTitle: TextView? = null
     private var actionsView: LinearLayout? = null
     private var trashView: TextView? = null
     private var searchQuery: String = ""
@@ -288,7 +288,7 @@ class BubbleService : Service() {
     private fun showTrash() {
         if (trashView != null) return
         val text = TextView(this)
-        text.text = "✕ বাবল লুকাতে এখানে ছাড়ুন"
+        text.text = "✕"
         text.setTextColor(resources.getColor(R.color.bd_text, theme))
         text.setBackgroundResource(R.drawable.bg_panel)
         text.setPadding(24, 24, 24, 24)
@@ -353,24 +353,32 @@ class BubbleService : Service() {
 
         val top = LinearLayout(this)
         top.orientation = LinearLayout.HORIZONTAL
-        val title = TextView(this)
-        title.text = "BubbleDock — অ্যাপের লাইন"
-        title.setTextSize(16f)
-        title.setTextColor(resources.getColor(R.color.bd_text, theme))
-        val titleParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        title.layoutParams = titleParams
-        dockTitle = title
+        val searchButton = Button(this)
+        searchButton.text = "\uD83D\uDD0D"
+        searchButton.textSize = 18f
+        searchButton.setBackgroundResource(R.drawable.bg_chip)
+        searchButton.setTextColor(resources.getColor(R.color.bd_text, theme))
+        val spacer = TextView(this)
+        val spacerParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        spacer.layoutParams = spacerParams
         val close = Button(this)
-        close.text = getString(R.string.close)
+        close.text = "✕"
+        close.textSize = 18f
+        close.setBackgroundResource(R.drawable.bg_chip)
+        close.setTextColor(resources.getColor(R.color.bd_text, theme))
         close.setOnClickListener { removeDock() }
-        top.addView(title)
+        top.addView(searchButton)
+        top.addView(spacer)
         top.addView(close)
         root.addView(top)
 
         val search = EditText(this)
-        search.hint = getString(R.string.search_hint)
+        search.visibility = View.GONE
         search.setTextColor(resources.getColor(R.color.bd_text, theme))
-        search.setHintTextColor(resources.getColor(R.color.bd_text_secondary, theme))
+        searchButton.setOnClickListener {
+            search.visibility = if (search.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            if (search.visibility == View.VISIBLE) search.requestFocus()
+        }
         search.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
             }
@@ -417,7 +425,6 @@ class BubbleService : Service() {
         }
         dockView = null
         dockRow = null
-        dockTitle = null
         dockOpen = false
         searchQuery = ""
         groupSelected = null
@@ -427,17 +434,11 @@ class BubbleService : Service() {
         val row = dockRow ?: return
         row.removeAllViews()
         val apps = dockApps()
-        dockTitle?.text = if (groupSelected != null) {
-            "গ্রুপ: " + groupSelected
-        } else if (searchQuery.isNotBlank()) {
-            "খোঁজা অ্যাপ"
-        } else {
-            "BubbleDock — অ্যাপের লাইন"
-        }
         if (apps.isEmpty()) {
-            val note = TextView(this)
-            note.text = getString(R.string.no_fav)
-            note.setTextColor(resources.getColor(R.color.bd_text_secondary, theme))
+            val note = ImageView(this)
+            note.setImageResource(R.drawable.ic_bubble)
+            val noteParams = LinearLayout.LayoutParams(dp(64), dp(64))
+            note.layoutParams = noteParams
             row.addView(note)
             return
         }
@@ -456,15 +457,7 @@ class BubbleService : Service() {
             } catch (e: Exception) {
                 icon.setImageResource(R.drawable.ic_bubble)
             }
-            val label = TextView(this)
-            label.text = app.label
-            label.setTextSize(12f)
-            label.maxLines = 1
-            label.ellipsize = android.text.TextUtils.TruncateAt.END
-            label.gravity = Gravity.CENTER
-            label.setTextColor(resources.getColor(R.color.bd_text, theme))
             item.addView(icon)
-            item.addView(label)
             item.setOnClickListener { openApp(app.packageName) }
             row.addView(item)
         }
@@ -501,14 +494,11 @@ class BubbleService : Service() {
         root.orientation = LinearLayout.VERTICAL
         root.setBackgroundResource(R.drawable.bg_panel)
         root.setPadding(dp(16), dp(16), dp(16), dp(16))
-        val title = TextView(this)
-        title.text = getString(R.string.actions_title)
-        title.setTextSize(16f)
-        title.setTextColor(resources.getColor(R.color.bd_text, theme))
-        root.addView(title)
         for (code in Store.quickActions(this)) {
             val button = Button(this)
-            button.text = Actions.labelFor(code)
+            button.text = Actions.iconFor(code)
+            button.textSize = 20f
+            button.contentDescription = Actions.labelFor(code)
             button.setBackgroundResource(R.drawable.bg_chip)
             button.setTextColor(resources.getColor(R.color.bd_text, theme))
             button.setOnClickListener {
@@ -519,10 +509,14 @@ class BubbleService : Service() {
         }
         val groups = Store.groups(this)
         val keys = groups.keys()
+        val groupIcons = listOf("\uD83D\uDC65", "\uD83D\uDCDA", "\uD83C\uDFAE", "\uD83D\uDCBC", "\uD83C\uDFE0", "\u2B50")
+        var groupIndex = 0
         while (keys.hasNext()) {
             val name = keys.next()
             val button = Button(this)
-            button.text = "গ্রুপ: " + name
+            button.text = groupIcons[groupIndex % groupIcons.size]
+            button.textSize = 20f
+            button.contentDescription = name
             button.setBackgroundResource(R.drawable.bg_chip)
             button.setTextColor(resources.getColor(R.color.bd_text, theme))
             button.setOnClickListener {
@@ -531,9 +525,11 @@ class BubbleService : Service() {
                 showDock()
             }
             root.addView(button)
+            groupIndex++
         }
         val close = Button(this)
-        close.text = getString(R.string.close)
+        close.text = "✕"
+        close.textSize = 20f
         close.setOnClickListener { removeActions() }
         root.addView(close)
 
