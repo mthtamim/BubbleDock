@@ -395,6 +395,20 @@ class BubbleService : Service() {
             }
             root.addView(iconView)
         }
+        val centreCross = TextView(this)
+        centreCross.text = "✕"
+        centreCross.textSize = 14f
+        centreCross.gravity = Gravity.CENTER
+        centreCross.setBackgroundResource(R.drawable.bg_ring_icon)
+        centreCross.setTextColor(resources.getColor(R.color.bd_text, theme))
+        val centreSize = dp(32)
+        val centreParams = FrameLayout.LayoutParams(centreSize, centreSize)
+        centreParams.leftMargin = center - centreSize / 2
+        centreParams.topMargin = center - centreSize / 2
+        centreCross.layoutParams = centreParams
+        centreCross.setOnClickListener { removeCircular() }
+        root.addView(centreCross)
+
         val bubbleSize = Store.bubbleSize(this).coerceIn(40, 96)
         val params = WindowManager.LayoutParams(
             size, size,
