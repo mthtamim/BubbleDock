@@ -34,6 +34,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
+ * BubbleDock v1.4.1: ring fix only, nothing else changed.
  * BubbleDock v1.4: gestures from Tamim's hand sketch.
  * - Normally only the bubble circle is visible.
  * - Single tap on the bubble: circular menu, mainly quick ACTIONS
@@ -366,21 +367,24 @@ class BubbleService : Service() {
             Toast.makeText(this, "সেটিংস থেকে অ্যাকশন বাছো", Toast.LENGTH_SHORT).show()
             return
         }
-        val size = dp(260)
+        val size = dp(160)
         val root = FrameLayout(this)
-        root.setBackgroundResource(R.drawable.bg_panel)
+        // v1.4.1: NO panel background. A square card here is exactly what
+        // made v1.4 look like a box instead of a ring. The overlay is
+        // transparent; only the icons float, and the bubble underneath
+        // stays visible in the centre and closes the menu when tapped.
         val center = size / 2
-        val radius = dp(92)
+        val radius = dp(56)
         for ((index, code) in actions.withIndex()) {
             val angle = Math.toRadians(-90.0 + index * 360.0 / actions.size)
             val iconView = TextView(this)
             iconView.text = Actions.iconFor(code)
-            iconView.textSize = 18f
+            iconView.textSize = 14f
             iconView.gravity = Gravity.CENTER
             iconView.contentDescription = Actions.labelFor(code)
-            iconView.setBackgroundResource(R.drawable.bg_chip)
+            iconView.setBackgroundResource(R.drawable.bg_ring_icon)
             iconView.setTextColor(resources.getColor(R.color.bd_text, theme))
-            val iconSize = dp(48)
+            val iconSize = dp(32)
             val params = FrameLayout.LayoutParams(iconSize, iconSize)
             params.leftMargin = (center + radius * cos(angle) - iconSize / 2).toInt()
             params.topMargin = (center + radius * sin(angle) - iconSize / 2).toInt()
@@ -391,20 +395,6 @@ class BubbleService : Service() {
             }
             root.addView(iconView)
         }
-        val close = TextView(this)
-        close.text = "✕"
-        close.textSize = 18f
-        close.gravity = Gravity.CENTER
-        close.setBackgroundResource(R.drawable.bg_chip)
-        close.setTextColor(resources.getColor(R.color.bd_text, theme))
-        val closeSize = dp(48)
-        val closeParams = FrameLayout.LayoutParams(closeSize, closeSize)
-        closeParams.leftMargin = center - closeSize / 2
-        closeParams.topMargin = center - closeSize / 2
-        close.layoutParams = closeParams
-        close.setOnClickListener { removeCircular() }
-        root.addView(close)
-
         val bubbleSize = Store.bubbleSize(this).coerceIn(40, 96)
         val params = WindowManager.LayoutParams(
             size, size,
