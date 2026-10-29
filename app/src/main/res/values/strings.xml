@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BubbleDock</string>
+    <string name="bubble_desc">BubbleDock বাবল: ট্যাপ করলে প্যানেল খুলবে, টেনে সরানো যাবে</string>
+    <string name="channel_name">BubbleDock বাবল</string>
+    <string name="channel_desc">ভাসমান বাবল চালু রাখার নোটিফিকেশন</string>
+    <string name="notif_title">BubbleDock চলছে</string>
+    <string name="notif_text">বাবলে ট্যাপ করলে তোমার বেছে নেওয়া অ্যাপ আর কাজগুলো দেখাবে। বন্ধ করতে এখানে ট্যাপ করো।</string>
+    <string name="notif_stop">বাবল বন্ধ করো</string>
+    <string name="panel_title">BubbleDock</string>
+    <string name="search_hint">অ্যাপ খুঁজুন…</string>
+    <string name="close">বন্ধ</string>
+    <string name="recent_title">রিসেন্ট অ্যাপস</string>
+    <string name="fav_title">ফেভারিট</string>
+    <string name="groups_title">গ্রুপ</string>
+    <string name="all_title">সব অ্যাপ</string>
+    <string name="actions_title">কুইক অ্যাকশন</string>
+    <string name="no_recent">এখনো কোনো রিসেন্ট অ্যাপ পাওয়া যায়নি। Usage Access দিলে এখানে আসবে।</string>
+    <string name="no_fav">এখনো কোনো ফেভারিট নেই। সেটিংস থেকে অ্যাপ বাছো।</string>
+    <string name="need_accessibility">এই কাজের জন্য Accessibility চালু করতে হবে। সেটিংস থেকে BubbleDock Accessibility চালু করো।</string>
+    <string name="need_usage">রিসেন্ট অ্যাপ দেখতে Usage Access দরকার।</string>
+    <string name="need_overlay">বাবল দেখতে Overlay পারমিশন দরকার।</string>
+    <string name="need_admin">স্ক্রিন লকের জন্য Device Admin দরকার।</string>
+    <string name="done">হয়ে গেছে</string>
+</resources>
