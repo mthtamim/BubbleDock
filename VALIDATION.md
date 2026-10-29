@@ -1,38 +1,29 @@
-# BubbleDock v1.2.0 — লোকাল ভ্যালিডেশন
+# BubbleDock v1.3.0 — লোকাল ভ্যালিডেশন
 
-তারিখ: 2026-10-29 রাত। v1.2 কোড লোকালে তৈরি, এখনো পুশ হয়নি।
+তারিখ: 2026-10-29 রাত। v1.3 কোড লোকালে তৈরি, এখনো পুশ হয়নি।
 
-## v1.2-তে বদল
+## v1.3-তে বদল
 
-- BubbleService: ডকের টাইটেল আর লেবেল বাদ, অ্যাপের আইকন শুধু; টপে 🔍 আর ✕ আইকন;
-  সার্চ বাক্স শুরুতে লুকানো, হিন্ট নেই; অ্যাকশন পপআপে শুধু আইকন বাটন
-  (Actions.iconFor), গ্রুপে আলাদা আইকন; ট্র্যাশ শুধু ✕।
-- Actions.kt: iconFor(code) ম্যাপ যোগ।
-- MainActivity: সব body() ব্যাখ্যা বাদ, body() ফাংশনটাও সরানো; হেডিং আর
-  বাটন লেবেল ছোট করা; বাটন ব্যাকগ্রাউন্ড bg_panel (emerald আউটলাইনের ডার্ক কার্ড)।
-- colors: bd_bg #0A0F0D, bd_card #122019, bd_divider emerald আউটলাইন
-  (#4422C55E) — PhoneLink স্টাইল।
-- ভার্সন: versionCode 3, versionName 1.2.0।
+- AndroidManifest: <queries> যোগ — MAIN + LAUNCHER intent। এটাই
+  থার্ড-পার্টি অ্যাপ না আসার আসল কারণ ছিল (targetSdk 34, Android 11+
+  package visibility)। QUERY_ALL_PACKAGES লাগেনি।
+- BubbleService: ডক আর অ্যাকশন ছোট লাইনে — এক সারি, ~৫৬dp, ৩৬dp
+  আইকন, TextView আইকন বাটন (Button-এর ডিফল্ট উঁচুতা বাদ)। সার্চ
+  একই সারির ভেতরে স্ক্রলের জায়গা নেবে, উঁচুতা বাড়বে না।
+- dockApps fallback: ফেভারিট + রিসেন্ট খালি থাকলে সব অ্যাপ।
 
 ## লোকালে যাচাই হয়েছে
 
-- kt_check.py: BubbleService, MainActivity, Actions balanced, stray quote 0।
-- XML: সব res ফাইল well-formed।
-- সার্ভিসে আর search_hint/actions_title রেফারেন্স নেই।
+- kt_check.py: ৮টি Kotlin ফাইলই balanced, stray quote 0।
+- XML: manifest + সব res ফাইল well-formed, queries আছে।
+- ভার্সন: versionCode 4, versionName 1.3.0।
 
 ## লোকালে যাচাই হয়নি — CI-অনলি
 
 - Kotlin কম্পাইল আর AAPT: লোকালে Android SDK 34 নেই, CI-তেই প্রমাণ হবে।
-- ফোন টেস্ট: আইকন চেনা, গ্রুপ আইকন, সেটিংসের কম লেখা — সব বাকি।
+- ফোন টেস্ট: থার্ড-পার্টি অ্যাপ, ছোট লাইন, ডক খালি না থাকা — সব বাকি।
 
 ## পুশের সময় সতর্কতা
 
-- Workflow ফাইল App দিয়ে পুশ করা যাবে না (Workflows পারমিশন নেই)।
-  v1.2 পুশের আগে ব্রাউজারে workflow v1.2.0-এ আপডেট করতে হবে, তারপর
-  কোড পুশ করতে হবে (workflow ছাড়া)।
-
-## সত্যি সীমা
-
-- গ্রুপের নাম ওভারলেতে দেখা যাবে না, শুধু আইকন আর ক্রম দিয়ে চিনতে হবে।
-- ফেইল হলে টোস্ট আর নোটিফিকেশনে লেখা থাকবে — সেগুলো ওভারলে UI না।
-- v1.2-তে নেই: ম্যাক্রো/অটো-ট্যাপ, PhoneLink/Automation Lab ইন্টিগ্রেশন।
+- Workflow App দিয়ে পুশ করা যাবে না। v1.3 পুশের আগে ব্রাউজারে
+  workflow v1.3.0-এ আপডেট করতে হবে, তারপর কোড পুশ (workflow ছাড়া)।

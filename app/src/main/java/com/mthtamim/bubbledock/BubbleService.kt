@@ -22,7 +22,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
@@ -46,6 +45,8 @@ class BubbleService : Service() {
     private var bubbleView: ImageView? = null
     private var dockView: LinearLayout? = null
     private var dockRow: LinearLayout? = null
+    private var dockScroll: HorizontalScrollView? = null
+    private var dockSearch: EditText? = null
     private var actionsView: LinearLayout? = null
     private var trashView: TextView? = null
     private var searchQuery: String = ""
@@ -346,39 +347,41 @@ class BubbleService : Service() {
 
     private fun showDock() {
         if (dockView != null) return
+        // v1.3 small line: ONE horizontal row, ~56dp tall. No second row,
+        // no big cards. Layout in this one row: search icon, scrollable
+        // app icons, close icon. Search replaces the scroll in the same
+        // row when tapped, so the height never grows.
         val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
+        root.orientation = LinearLayout.HORIZONTAL
+        root.gravity = Gravity.CENTER_VERTICAL
         root.setBackgroundResource(R.drawable.bg_panel)
-        root.setPadding(dp(16), dp(16), dp(16), dp(16))
+        root.setPadding(dp(6), dp(6), dp(6), dp(6))
 
-        val top = LinearLayout(this)
-        top.orientation = LinearLayout.HORIZONTAL
-        val searchButton = Button(this)
-        searchButton.text = "\uD83D\uDD0D"
-        searchButton.textSize = 18f
-        searchButton.setBackgroundResource(R.drawable.bg_chip)
-        searchButton.setTextColor(resources.getColor(R.color.bd_text, theme))
-        val spacer = TextView(this)
-        val spacerParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        spacer.layoutParams = spacerParams
-        val close = Button(this)
-        close.text = "✕"
-        close.textSize = 18f
-        close.setBackgroundResource(R.drawable.bg_chip)
-        close.setTextColor(resources.getColor(R.color.bd_text, theme))
-        close.setOnClickListener { removeDock() }
-        top.addView(searchButton)
-        top.addView(spacer)
-        top.addView(close)
-        root.addView(top)
+        val searchIcon = TextView(this)
+        searchIcon.text = "\uD83D\uDD0D"
+        searchIcon.textSize = 18f
+        searchIcon.gravity = Gravity.CENTER
+        searchIcon.setBackgroundResource(R.drawable.bg_chip)
+        searchIcon.setTextColor(resources.getColor(R.color.bd_text, theme))
+        val searchIconParams = LinearLayout.LayoutParams(dp(40), dp(40))
+        searchIcon.layoutParams = searchIconParams
+
+        val scroll = HorizontalScrollView(this)
+        scroll.isHorizontalScrollBarEnabled = false
+        val scrollParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        scroll.layoutParams = scrollParams
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
+        scroll.addView(row)
+        dockRow = row
+        dockScroll = scroll
 
         val search = EditText(this)
         search.visibility = View.GONE
         search.setTextColor(resources.getColor(R.color.bd_text, theme))
-        searchButton.setOnClickListener {
-            search.visibility = if (search.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-            if (search.visibility == View.VISIBLE) search.requestFocus()
-        }
+        val searchParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        search.layoutParams = searchParams
         search.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
             }
@@ -391,15 +394,41 @@ class BubbleService : Service() {
                 refreshDockRow()
             }
         })
-        root.addView(search)
+        dockSearch = search
+        searchIcon.setOnClickListener {
+            if (search.visibility == View.VISIBLE) {
+                search.visibility = View.GONE
+                search.setText("")
+                scroll.visibility = View.VISIBLE
+            } else {
+                scroll.visibility = View.GONE
+                search.visibility = View.VISIBLE
+                search.requestFocus()
+            }
+        }
 
-        val scroll = HorizontalScrollView(this)
-        scroll.isHorizontalScrollBarEnabled = false
-        val row = LinearLayout(this)
-        row.orientation = LinearLayout.HORIZONTAL
-        scroll.addView(row)
+        val close = TextView(this)
+        close.text = "✕"
+        close.textSize = 18f
+        close.gravity = Gravity.CENTER
+        close.setBackgroundResource(R.drawable.bg_chip)
+        close.setTextColor(resources.getColor(R.color.bd_text, theme))
+        val closeParams = LinearLayout.LayoutParams(dp(40), dp(40))
+        close.layoutParams = closeParams
+        close.setOnClickListener {
+            if (search.visibility == View.VISIBLE) {
+                search.visibility = View.GONE
+                search.setText("")
+                scroll.visibility = View.VISIBLE
+            } else {
+                removeDock()
+            }
+        }
+
+        root.addView(searchIcon)
         root.addView(scroll)
-        dockRow = row
+        root.addView(search)
+        root.addView(close)
         refreshDockRow()
 
         val params = WindowManager.LayoutParams(
@@ -425,6 +454,8 @@ class BubbleService : Service() {
         }
         dockView = null
         dockRow = null
+        dockScroll = null
+        dockSearch = null
         dockOpen = false
         searchQuery = ""
         groupSelected = null
@@ -434,32 +465,18 @@ class BubbleService : Service() {
         val row = dockRow ?: return
         row.removeAllViews()
         val apps = dockApps()
-        if (apps.isEmpty()) {
-            val note = ImageView(this)
-            note.setImageResource(R.drawable.ic_bubble)
-            val noteParams = LinearLayout.LayoutParams(dp(64), dp(64))
-            note.layoutParams = noteParams
-            row.addView(note)
-            return
-        }
         for (app in apps) {
-            val item = LinearLayout(this)
-            item.orientation = LinearLayout.VERTICAL
-            item.gravity = Gravity.CENTER
-            val itemParams = LinearLayout.LayoutParams(dp(76), LinearLayout.LayoutParams.WRAP_CONTENT)
-            itemParams.setMargins(dp(4), dp(4), dp(4), dp(4))
-            item.layoutParams = itemParams
             val icon = ImageView(this)
-            val iconParams = LinearLayout.LayoutParams(dp(64), dp(64))
+            val iconParams = LinearLayout.LayoutParams(dp(36), dp(36))
+            iconParams.setMargins(dp(2), dp(2), dp(2), dp(2))
             icon.layoutParams = iconParams
             try {
                 icon.setImageDrawable(packageManager.getApplicationIcon(app.packageName))
             } catch (e: Exception) {
                 icon.setImageResource(R.drawable.ic_bubble)
             }
-            item.addView(icon)
-            item.setOnClickListener { openApp(app.packageName) }
-            row.addView(item)
+            icon.setOnClickListener { openApp(app.packageName) }
+            row.addView(icon)
         }
     }
 
@@ -485,27 +502,43 @@ class BubbleService : Service() {
         val favApps = favPackages.map { AppInfo(it, AppList.labelFor(this, it)) }
         val favSet = favPackages.toSet()
         val recent = AppList.recent(this, 8).filter { !favSet.contains(it.packageName) }
-        return favApps + recent
+        val combined = favApps + recent
+        if (combined.isNotEmpty()) return combined
+        return AppList.launchable(this)
     }
 
     private fun showActions() {
         if (actionsView != null) return
+        // v1.3 small line: one horizontal scrollable row of icons, ~56dp tall.
         val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
+        root.orientation = LinearLayout.HORIZONTAL
+        root.gravity = Gravity.CENTER_VERTICAL
         root.setBackgroundResource(R.drawable.bg_panel)
-        root.setPadding(dp(16), dp(16), dp(16), dp(16))
+        root.setPadding(dp(6), dp(6), dp(6), dp(6))
+        val scroll = HorizontalScrollView(this)
+        scroll.isHorizontalScrollBarEnabled = false
+        val scrollParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        scroll.layoutParams = scrollParams
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
+        scroll.addView(row)
         for (code in Store.quickActions(this)) {
-            val button = Button(this)
-            button.text = Actions.iconFor(code)
-            button.textSize = 20f
-            button.contentDescription = Actions.labelFor(code)
-            button.setBackgroundResource(R.drawable.bg_chip)
-            button.setTextColor(resources.getColor(R.color.bd_text, theme))
-            button.setOnClickListener {
+            val iconView = TextView(this)
+            iconView.text = Actions.iconFor(code)
+            iconView.textSize = 18f
+            iconView.gravity = Gravity.CENTER
+            iconView.contentDescription = Actions.labelFor(code)
+            iconView.setBackgroundResource(R.drawable.bg_chip)
+            iconView.setTextColor(resources.getColor(R.color.bd_text, theme))
+            val iconParams = LinearLayout.LayoutParams(dp(40), dp(40))
+            iconParams.setMargins(dp(2), dp(2), dp(2), dp(2))
+            iconView.layoutParams = iconParams
+            iconView.setOnClickListener {
                 Actions.run(this, code)
                 removeActions()
             }
-            root.addView(button)
+            row.addView(iconView)
         }
         val groups = Store.groups(this)
         val keys = groups.keys()
@@ -513,39 +546,45 @@ class BubbleService : Service() {
         var groupIndex = 0
         while (keys.hasNext()) {
             val name = keys.next()
-            val button = Button(this)
-            button.text = groupIcons[groupIndex % groupIcons.size]
-            button.textSize = 20f
-            button.contentDescription = name
-            button.setBackgroundResource(R.drawable.bg_chip)
-            button.setTextColor(resources.getColor(R.color.bd_text, theme))
-            button.setOnClickListener {
+            val iconView = TextView(this)
+            iconView.text = groupIcons[groupIndex % groupIcons.size]
+            iconView.textSize = 18f
+            iconView.gravity = Gravity.CENTER
+            iconView.contentDescription = name
+            iconView.setBackgroundResource(R.drawable.bg_chip)
+            iconView.setTextColor(resources.getColor(R.color.bd_text, theme))
+            val iconParams = LinearLayout.LayoutParams(dp(40), dp(40))
+            iconParams.setMargins(dp(2), dp(2), dp(2), dp(2))
+            iconView.layoutParams = iconParams
+            iconView.setOnClickListener {
                 groupSelected = name
                 removeActions()
                 showDock()
             }
-            root.addView(button)
+            row.addView(iconView)
             groupIndex++
         }
-        val close = Button(this)
+        val close = TextView(this)
         close.text = "✕"
-        close.textSize = 20f
+        close.textSize = 18f
+        close.gravity = Gravity.CENTER
+        close.setBackgroundResource(R.drawable.bg_chip)
+        close.setTextColor(resources.getColor(R.color.bd_text, theme))
+        val closeParams = LinearLayout.LayoutParams(dp(40), dp(40))
+        close.layoutParams = closeParams
         close.setOnClickListener { removeActions() }
+        root.addView(scroll)
         root.addView(close)
 
-        val width = dp(220)
-        val x = (bubbleX - width).coerceAtLeast(16)
-        val y = (bubbleY - dp(20)).coerceAtLeast(16)
         val params = WindowManager.LayoutParams(
-            width,
+            screenWidth - dp(20),
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         )
-        params.gravity = Gravity.TOP or Gravity.START
-        params.x = x
-        params.y = y
+        params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        params.y = dp(16)
         windowManager.addView(root, params)
         actionsView = root
         actionsOpen = true
