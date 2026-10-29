@@ -81,6 +81,20 @@ object Store {
         prefs(context).edit().putString(key(context, "groups"), groups.toString()).apply()
     }
 
+    fun dockOrientation(context: Context): String =
+        prefs(context).getString("dock_orientation", "horizontal") ?: "horizontal"
+
+    fun setDockOrientation(context: Context, orientation: String) {
+        prefs(context).edit().putString("dock_orientation", orientation).apply()
+    }
+
+    fun floatingWindow(context: Context): Boolean =
+        prefs(context).getBoolean("floating_window", false)
+
+    fun setFloatingWindow(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean("floating_window", on).apply()
+    }
+
     fun bubbleSize(context: Context): Int =
         prefs(context).getInt("bubble_size", 56)
 
@@ -119,6 +133,8 @@ object Store {
         out.put("bubble_size", bubbleSize(context))
         out.put("panel_layout", panelLayout(context))
         out.put("double_tap", doubleTapAction(context))
+        out.put("dock_orientation", dockOrientation(context))
+        out.put("floating_window", floatingWindow(context))
         return out.toString()
     }
 }

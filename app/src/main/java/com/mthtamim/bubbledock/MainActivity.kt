@@ -203,6 +203,26 @@ class MainActivity : AppCompatActivity() {
         button("বাবল ৫৬") { Store.setBubbleSize(this, 56) }
         button("বাবল ৭২") { Store.setBubbleSize(this, 72) }
 
+        heading("ডক")
+        button("ডক হরিজন্টাল") {
+            Store.setDockOrientation(this, "horizontal")
+            Toast.makeText(this, "ডক হরিজন্টাল সেভ হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+        button("ডক ভার্টিকাল") {
+            Store.setDockOrientation(this, "vertical")
+            Toast.makeText(this, "ডক ভার্টিকাল সেভ হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+
+        heading("ফ্লোটিং উইন্ডো")
+        button("ফ্লোটিং উইন্ডো চালু") {
+            Store.setFloatingWindow(this, true)
+            Toast.makeText(this, "ফ্লোটিং উইন্ডো চালু হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+        button("ফ্লোটিং উইন্ডো বন্ধ") {
+            Store.setFloatingWindow(this, false)
+            Toast.makeText(this, "ফ্লোটিং উইন্ডো বন্ধ হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+
         heading("ব্যাকআপ")
         button("ব্যাকআপ কপি") {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager

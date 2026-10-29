@@ -4,7 +4,10 @@ import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.app.ActivityOptions
 import android.content.pm.PackageManager
+import android.graphics.Rect
+import android.os.Build
 
 data class AppInfo(val packageName: String, val label: String)
 
@@ -75,6 +78,53 @@ object AppList {
             seen.mapNotNull { byPackage[it] }
         } catch (e: Exception) {
             emptyList()
+        }
+    }
+
+    /**
+     * Previous recent app: recent()[0] is the app the bubble is currently
+     * floating over (the overlay itself is not an activity, so it never
+     * appears here), so [1] is the app the user was in before the current
+     * one. That is the app a double tap should switch to. If only one
+     * recent app exists, fall back to it.
+     */
+    fun previousRecent(context: Context): AppInfo? {
+        val recentApps = recent(context, 3)
+        if (recentApps.size > 1) return recentApps[1]
+        if (recentApps.isNotEmpty()) return recentApps[0]
+        return null
+    }
+
+    /**
+     * Floating-window launch, best effort only. A regular app cannot force
+     * another app into a floating window: ActivityOptions.setLaunchBounds
+     * only takes effect on devices that support freeform windows. If the
+     * device ignores the bounds, the app opens fullscreen instead, and
+     * this function falls back to a normal launch on any failure.
+     */
+    fun launchFloating(context: Context, packageName: String): Boolean {
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+                ?: return false
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                val metrics = context.resources.displayMetrics
+                val width = metrics.widthPixels
+                val height = metrics.heightPixels
+                val bounds = Rect(
+                    width / 10,
+                    height / 6,
+                    width * 9 / 10,
+                    height * 5 / 6
+                )
+                val options = ActivityOptions.makeBasic().setLaunchBounds(bounds)
+                context.startActivity(intent, options.toBundle())
+                return true
+            }
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            launch(context, packageName)
         }
     }
 

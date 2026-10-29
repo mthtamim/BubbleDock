@@ -27,3 +27,10 @@
 
 - Workflow App দিয়ে পুশ করা যাবে না। v1.3 পুশের আগে ব্রাউজারে
   workflow v1.3.0-এ আপডেট করতে হবে, তারপর কোড পুশ (workflow ছাড়া)।
+
+## v1.4.0 local validation
+
+- kt_check: 8 Kotlin files, balanced, stray quotes 0
+- All res XML + manifest well-formed
+- Kotlin compile + AAPT CI-only (no Android SDK 34 locally)
+- Phone test pending: circular actions, double-tap previous app, long-press dock, H/V orientation, floating window on XOS
